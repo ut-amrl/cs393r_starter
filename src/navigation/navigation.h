@@ -67,6 +67,10 @@ class Navigation {
 
  private:
 
+  // Whether odometry has been initialized.
+  bool odom_initialized_;
+  // Whether localization has been initialized.
+  bool localization_initialized_;
   // Current robot location.
   Eigen::Vector2f robot_loc_;
   // Current robot orientation.
@@ -79,6 +83,12 @@ class Navigation {
   Eigen::Vector2f odom_loc_;
   // Odometry-reported robot angle.
   float odom_angle_;
+  // Odometry-reported robot starting location.
+  Eigen::Vector2f odom_start_loc_;
+  // Odometry-reported robot starting angle.
+  float odom_start_angle_;
+  // Latest observed point cloud.
+  std::vector<Eigen::Vector2f> point_cloud_;
 
   // Whether navigation is complete.
   bool nav_complete_;
