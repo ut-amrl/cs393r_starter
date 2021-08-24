@@ -39,7 +39,7 @@ Please refer to the [UT AUTOmata reference manual]() for instructions on setting
 There are three main executables: `navigation`, `particle_filter`, and `slam`. Each executable has a corresponding `.h` and `.cc` file that defines the class for the implementation. An associated `*_main.cc` file abstracts away ROS-specific details. For example, the `particle_filter` executable consists of three files:
 ```
 src
-├── particle_filter
+└── particle_filter
     ├── particle_filter.cc
     ├── particle_filter.h
     └── particle_filter_main.cc
