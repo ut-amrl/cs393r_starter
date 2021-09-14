@@ -85,6 +85,13 @@ void LaserCallback(const sensor_msgs::LaserScan& msg) {
 
   static vector<Vector2f> point_cloud_;
   // TODO Convert the LaserScan to a point cloud
+  // The LaserScan parameters are accessible as follows:
+  // msg.angle_increment // Angular increment between subsequent rays
+  // msg.angle_max // Angle of the first ray
+  // msg.angle_min // Angle of the last ray
+  // msg.range_max // Maximum observable range
+  // msg.range_min // Minimum observable range
+  // msg.ranges[i] // The range of the i'th ray
   navigation_->ObservePointCloud(point_cloud_, msg.header.stamp.toSec());
   last_laser_msg_ = msg;
 }
