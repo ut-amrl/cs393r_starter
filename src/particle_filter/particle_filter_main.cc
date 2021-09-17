@@ -48,7 +48,6 @@
 #include "shared/util/timer.h"
 
 #include "particle_filter.h"
-#include "vector_map/vector_map.h"
 #include "visualization/visualization.h"
 
 using amrl_msgs::VisualizationMsg;
@@ -72,7 +71,6 @@ DEFINE_string(odom_topic, "/odom", "Name of ROS topic for odometry data");
 DEFINE_string(init_topic,
               "/set_pose",
               "Name of ROS topic for initialization");
-DEFINE_string(map, "", "Map file to use");
 
 DECLARE_int32(v);
 
@@ -90,7 +88,7 @@ ros::Publisher localization_publisher_;
 ros::Publisher laser_publisher_;
 VisualizationMsg vis_msg_;
 sensor_msgs::LaserScan last_laser_msg_;
-vector_map::VectorMap map_;
+
 vector<Vector2f> trajectory_points_;
 
 void InitializeMsgs() {
@@ -189,7 +187,7 @@ void OdometryCallback(const nav_msgs::Odometry& msg) {
   const Vector2f odom_loc(msg.pose.pose.position.x, msg.pose.pose.position.y);
   const float odom_angle =
       2.0 * atan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
-  particle_filter_.ObserveOdometry(odom_loc, odom_angle);
+  particle_filter_.Predict(odom_loc, odom_angle);
   Vector2f robot_loc(0, 0);
   float robot_angle(0);
   particle_filter_.GetLocation(&robot_loc, &robot_angle);
@@ -204,7 +202,7 @@ void OdometryCallback(const nav_msgs::Odometry& msg) {
 void InitCallback(const amrl_msgs::Localization2DMsg& msg) {
   const Vector2f init_loc(msg.pose.x, msg.pose.y);
   const float init_angle = msg.pose.theta;
-  const string map = msg.map;
+  const string map = "maps/" + msg.map + ".txt";
   printf("Initialize: %s (%f,%f) %f\u00b0\n",
          map.c_str(),
          init_loc.x(),
@@ -250,7 +248,6 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "particle_filter", ros::init_options::NoSigintHandler);
   ros::NodeHandle n;
   InitializeMsgs();
-  map_ = vector_map::VectorMap(CONFIG_map_name_);
 
   visualization_publisher_ =
       n.advertise<VisualizationMsg>("visualization", 1);
