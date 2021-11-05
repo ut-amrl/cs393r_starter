@@ -59,3 +59,7 @@ ADD_EXECUTABLE(eigen_tutorial
 
 ADD_EXECUTABLE(simple_queue_test
                src/navigation/simple_queue_test.cc)
+
+ADD_EXECUTABLE(cimg_example
+               src/cimg_example.cc)
+TARGET_LINK_LIBRARIES(cimg_example shared_library ${libs} X11)
