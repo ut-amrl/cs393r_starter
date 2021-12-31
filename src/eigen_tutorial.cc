@@ -61,12 +61,23 @@ void DemoRotations() {
   cout << "m1: \n" << m1 << "\n";
 }
 
+void DemoTFs() {
+  Eigen::Affine2f a_r2_r1;
+  a_r2_r1 = Eigen::Translation2f(2, 3) * Eigen::Rotation2Df(M_PI);
+  Vector2f v1 (1, 0);
+  Vector2f v2 = a_r2_r1 * v1;
+  cout << v2;
+}
+
 int main() {
   cout << "Basics: Vectors and Matrices.\n";
   DemoBasics();
 
   cout << "\n\n\nDifferent representations of rotation.\n";
   DemoRotations();
+
+  cout << "\n\n\nDifferent Coorkdinate Transforms.\n";
+  DemoTFs();
 
   return 0;
 }
