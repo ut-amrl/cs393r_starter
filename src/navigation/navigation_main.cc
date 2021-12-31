@@ -46,6 +46,8 @@
 #include "shared/util/timer.h"
 #include "shared/ros/ros_helpers.h"
 
+#include "std_msgs/String.h"
+
 #include "navigation.h"
 
 using amrl_msgs::Localization2DMsg;
@@ -68,7 +70,7 @@ DEFINE_string(loc_topic, "localization", "Name of ROS topic for localization");
 DEFINE_string(init_topic,
               "initialpose",
               "Name of ROS topic for initialization");
-DEFINE_string(map, "maps/GDC1.txt", "Name of vector map file");
+DEFINE_string(map, "GDC1", "Name of vector map file");
 
 bool run_ = true;
 sensor_msgs::LaserScan last_laser_msg_;
@@ -131,6 +133,10 @@ void LocalizationCallback(const amrl_msgs::Localization2DMsg msg) {
   navigation_->UpdateLocation(Vector2f(msg.pose.x, msg.pose.y), msg.pose.theta);
 }
 
+void StringCallback(const std_msgs::String& msg) {
+  std::cout << msg.data << "\n";
+}
+
 int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, false);
   signal(SIGINT, SignalHandler);
@@ -138,6 +144,9 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "navigation", ros::init_options::NoSigintHandler);
   ros::NodeHandle n;
   navigation_ = new Navigation(FLAGS_map, &n);
+
+  ros::Subscriber string_sub = 
+      n.subscribe("string_topic", 1, &StringCallback);
 
   ros::Subscriber velocity_sub =
       n.subscribe(FLAGS_odom_topic, 1, &OdometryCallback);

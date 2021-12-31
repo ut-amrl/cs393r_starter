@@ -23,6 +23,8 @@
 
 #include "eigen3/Eigen/Dense"
 
+#include "vector_map/vector_map.h"
+
 #ifndef NAVIGATION_H
 #define NAVIGATION_H
 
@@ -96,6 +98,8 @@ class Navigation {
   Eigen::Vector2f nav_goal_loc_;
   // Navigation goal angle.
   float nav_goal_angle_;
+  // Map of the environment.
+  vector_map::VectorMap map_;
 };
 
 }  // namespace navigation

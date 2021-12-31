@@ -87,15 +87,17 @@ ros::Publisher visualization_publisher_;
 ros::Publisher localization_publisher_;
 ros::Publisher laser_publisher_;
 VisualizationMsg vis_msg_;
+amrl_msgs::Localization2DMsg localization_msg_;
 sensor_msgs::LaserScan last_laser_msg_;
 
 vector<Vector2f> trajectory_points_;
+string current_map_;
 
 void InitializeMsgs() {
   std_msgs::Header header;
   header.frame_id = "map";
   header.seq = 0;
-
+  localization_msg_.header = header;
   vis_msg_ = visualization::NewVisualizationMessage("map", "particle_filter");
 }
 
@@ -180,6 +182,18 @@ void LaserCallback(const sensor_msgs::LaserScan& msg) {
   PublishVisualization();
 }
 
+void PublishLocation() {
+  Vector2f robot_loc(0, 0);
+  float robot_angle(0);
+  particle_filter_.GetLocation(&robot_loc, &robot_angle);
+  localization_msg_.header.stamp = ros::Time::now();
+  localization_msg_.map = current_map_;
+  localization_msg_.pose.x = robot_loc.x();
+  localization_msg_.pose.y = robot_loc.y();
+  localization_msg_.pose.theta = robot_angle;
+  localization_publisher_.publish(localization_msg_);
+}
+
 void OdometryCallback(const nav_msgs::Odometry& msg) {
   if (FLAGS_v > 0) {
     printf("Odometry t=%f\n", msg.header.stamp.toSec());
@@ -188,27 +202,26 @@ void OdometryCallback(const nav_msgs::Odometry& msg) {
   const float odom_angle =
       2.0 * atan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
   particle_filter_.Predict(odom_loc, odom_angle);
-  Vector2f robot_loc(0, 0);
-  float robot_angle(0);
-  particle_filter_.GetLocation(&robot_loc, &robot_angle);
-  amrl_msgs::Localization2DMsg localization_msg;
-  localization_msg.pose.x = robot_loc.x();
-  localization_msg.pose.y = robot_loc.y();
-  localization_msg.pose.theta = robot_angle;
-  localization_publisher_.publish(localization_msg);
+  PublishLocation();
   PublishVisualization();
+}
+
+string GetMapFileFromName(const string& map) {
+  string maps_dir_ = ros::package::getPath("amrl_maps");
+  return maps_dir_ + "/" + map + "/" + map + ".vectormap.txt";
 }
 
 void InitCallback(const amrl_msgs::Localization2DMsg& msg) {
   const Vector2f init_loc(msg.pose.x, msg.pose.y);
   const float init_angle = msg.pose.theta;
-  const string map = "maps/" + msg.map + ".txt";
+  current_map_ = msg.map;
+  const string map_file = GetMapFileFromName(current_map_);
   printf("Initialize: %s (%f,%f) %f\u00b0\n",
-         map.c_str(),
+         current_map_.c_str(),
          init_loc.x(),
          init_loc.y(),
          RadToDeg(init_angle));
-  particle_filter_.Initialize(map, init_loc, init_angle);
+  particle_filter_.Initialize(map_file, init_loc, init_angle);
   trajectory_points_.clear();
 }
 
@@ -225,6 +238,10 @@ void ProcessLive(ros::NodeHandle* n) {
       FLAGS_odom_topic.c_str(),
       1,
       OdometryCallback);
+  particle_filter_.Initialize(
+      GetMapFileFromName(current_map_),
+      Vector2f(CONFIG_init_x_, CONFIG_init_x_),
+      DegToRad(CONFIG_init_r_));
   while (ros::ok() && run_) {
     ros::spinOnce();
     PublishVisualization();
@@ -248,6 +265,7 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "particle_filter", ros::init_options::NoSigintHandler);
   ros::NodeHandle n;
   InitializeMsgs();
+  current_map_ = CONFIG_map_name_;
 
   visualization_publisher_ =
       n.advertise<VisualizationMsg>("visualization", 1);

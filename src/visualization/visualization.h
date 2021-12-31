@@ -68,6 +68,8 @@ void DrawParticle(const Eigen::Vector2f& loc,
 void DrawPathOption(const float curvature,
                     const float distance,
                     const float clearance,
+                    const uint32_t color,
+                    bool show_clearance,
                     amrl_msgs::VisualizationMsg& msg);
 
 }  // namespace visualization

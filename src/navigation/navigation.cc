@@ -27,6 +27,7 @@
 #include "amrl_msgs/VisualizationMsg.h"
 #include "glog/logging.h"
 #include "ros/ros.h"
+#include "ros/package.h"
 #include "shared/math/math_util.h"
 #include "shared/util/timer.h"
 #include "shared/ros/ros_helpers.h"
@@ -54,7 +55,12 @@ const float kEpsilon = 1e-5;
 
 namespace navigation {
 
-Navigation::Navigation(const string& map_file, ros::NodeHandle* n) :
+string GetMapFileFromName(const string& map) {
+  string maps_dir_ = ros::package::getPath("amrl_maps");
+  return maps_dir_ + "/" + map + "/" + map + ".vectormap.txt";
+}
+
+Navigation::Navigation(const string& map_name, ros::NodeHandle* n) :
     odom_initialized_(false),
     localization_initialized_(false),
     robot_loc_(0, 0),
@@ -64,6 +70,7 @@ Navigation::Navigation(const string& map_file, ros::NodeHandle* n) :
     nav_complete_(true),
     nav_goal_loc_(0, 0),
     nav_goal_angle_(0) {
+  map_.Load(GetMapFileFromName(map_name));
   drive_pub_ = n->advertise<AckermannCurvatureDriveMsg>(
       "ackermann_curvature_drive", 1);
   viz_pub_ = n->advertise<VisualizationMsg>("visualization", 1);
