@@ -35,6 +35,15 @@ Please refer to the [UT AUTOmata reference manual]() for instructions on setting
 4. `cd <cloned_repo>`
 5. `make -j`
 
+### Optional: Building/Running with Docker
+1. Make sure you have Docker installed and set up.
+2. Make sure you are in the root directory of the repository.
+3. Run `make docker_all` to just compile. 
+4. You can run `make docker_shell` to get a shell within the Docker container. The shell will automatically launch `roscore` and the `ut_automata` websocket and simulator inside of a `tmux` session. Inside the shell, you can compile and run your navigation code and connect using localhost in the web visualization. 
+
+For debugging purposes, you can look at the tmux processes at any time by attaching to the session: `tmux a -t ROS`. For more information about `tmux`, refer to the [tmux documentation](https://tmuxguide.readthedocs.io/en/latest/tmux/tmux.html)
+5. To shutdown the docker container, run `make docker_stop`
+
 ### Code Overview
 There are three main executables: `navigation`, `particle_filter`, and `slam`. Each executable has a corresponding `.h` and `.cc` file that defines the class for the implementation. An associated `*_main.cc` file abstracts away ROS-specific details. For example, the `particle_filter` executable consists of three files:
 ```
