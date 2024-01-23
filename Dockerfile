@@ -39,7 +39,7 @@ RUN /bin/bash -lc "cd amrl_msgs && make"
 RUN /bin/bash -lc "cd ut_automata && make"
 
 # add launcher
-ENV CS378_DOCKER_CONTEXT 1
+ENV CS393R_DOCKER_CONTEXT 1
 COPY --chown=dev:dev ./tmux_session.sh /home/dev/tmux_session.sh
 RUN chmod u+x /home/dev/tmux_session.sh
 CMD [ "/home/dev/tmux_session.sh" ]

@@ -13,7 +13,6 @@ build_type=Release
 # build_type=Debug
 
 .SILENT:
-
 all: build/CMakeLists.txt.copy
 	$(info Build_type is [${build_type}])
 	$(MAKE) --no-print-directory -C build
