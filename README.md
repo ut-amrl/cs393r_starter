@@ -36,6 +36,7 @@ Please refer to the [UT AUTOmata reference manual]() for instructions on setting
 5. `make -j`
 
 ### Optional: Building/Running with Docker
+Skip the above steps
 1. Make sure you have Docker installed and set up.
 2. Make sure you are in the root directory of the repository.
 3. Run `make docker_all` to just compile. 
@@ -43,6 +44,8 @@ Please refer to the [UT AUTOmata reference manual]() for instructions on setting
 
 For debugging purposes, you can look at the tmux processes at any time by attaching to the session: `tmux a -t ROS`. For more information about `tmux`, refer to the [tmux documentation](https://tmuxguide.readthedocs.io/en/latest/tmux/tmux.html)
 5. To shutdown the docker container, run `make docker_stop`
+
+To make code changes take effect, open the container shell (which can be done using make docker_shell) and run make -j within the cs393r_starter directory. make docker_all then make docker_shell also builds the changes if you have to do that otherwise. 
 
 ### Code Overview
 There are three main executables: `navigation`, `particle_filter`, and `slam`. Each executable has a corresponding `.h` and `.cc` file that defines the class for the implementation. An associated `*_main.cc` file abstracts away ROS-specific details. For example, the `particle_filter` executable consists of three files:
