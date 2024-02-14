@@ -28,9 +28,13 @@ debug_all: | set_debug all
 clean:
 	rm -rf build bin lib
 
+cuda_ex: CUDAEXFLAGS += -DBUILD_CUDA_EX=ON
+cuda_ex: all
+
 build/CMakeLists.txt.copy: CMakeLists.txt Makefile
 	mkdir -p build
 	cd build && cmake -DCMAKE_BUILD_TYPE=$(build_type) \
 		-DCMAKE_CXX_COMPILER=$(CXX_compiler) \
-		-DCMAKE_C_COMPILER=$(C_compiler) ..
+		-DCMAKE_C_COMPILER=$(C_compiler) \
+		${CUDAEXFLAGS} ..
 	cp CMakeLists.txt build/CMakeLists.txt.copy

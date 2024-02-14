@@ -1,5 +1,5 @@
 PROJECT(reference_car)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
 
 MESSAGE(STATUS "Compiling Reference Car Localization + Navigation")
 MESSAGE(STATUS "Using compiler: ${CMAKE_CXX_COMPILER}")
@@ -27,7 +27,7 @@ MESSAGE(STATUS "CXX Flags: ${CMAKE_CXX_FLAGS}")
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-SET(libs roslib roscpp rosbag glog gflags amrl-shared-lib boost_system lua5.1
+SET(libs roslib roscpp rosconsole rosbag glog gflags amrl-shared-lib boost_system lua5.1
     pthread)
 
 ADD_LIBRARY(shared_library
@@ -55,11 +55,22 @@ ROSBUILD_ADD_EXECUTABLE(navigation
 TARGET_LINK_LIBRARIES(navigation shared_library ${libs})
 
 ADD_EXECUTABLE(eigen_tutorial
-               src/eigen_tutorial.cc)
+               src/examples/eigen_tutorial.cc)
 
 ADD_EXECUTABLE(simple_queue_test
                src/navigation/simple_queue_test.cc)
 
 ADD_EXECUTABLE(cimg_example
-               src/cimg_example.cc)
+               src/examples/cimg_example.cc)
 TARGET_LINK_LIBRARIES(cimg_example shared_library ${libs} X11)
+
+
+IF (BUILD_CUDA_EX)
+  MESSAGE("Building CUDA example")
+  enable_language(CUDA)
+
+  ADD_LIBRARY(cuda_ex_lib src/examples/cuda_ranges_to_cloud_lib.cu)
+  set_target_properties(cuda_ex_lib PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  ADD_EXECUTABLE(cuda_ex src/examples/cuda_ranges_to_cloud_main.cc)
+  TARGET_LINK_LIBRARIES(cuda_ex shared_library ${libs} cuda_ex_lib roscpp_serialization)
+ENDIF()
