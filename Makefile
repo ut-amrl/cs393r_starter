@@ -18,7 +18,7 @@ all: build/CMakeLists.txt.copy
 	$(MAKE) --no-print-directory -C build
 
 docker_all: docker_build_q
-	docker run --rm --volume "$(shell pwd)":/home/dev/cs393r_starter ros2_cs393r_starter "cd cs393r_starter"
+	docker run --rm --volume "$(shell pwd)":/home/dev/cs393r_starter ros2_cs393r_starter "cd cs393r_starter && colcon build --packages-select cs393r_starter"
 
 docker_shell: docker_build_q
 	if [ $(shell docker ps -a -f name=ros2_cs393r_starter_shell | wc -l) -ne 2 ]; then docker run -dit --name ros2_cs393r_starter_shell --volume "$(shell pwd)":/home/dev/cs393r_starter --workdir /home/dev/cs393r_starter -p 10272:10272 ros2_cs393r_starter; fi

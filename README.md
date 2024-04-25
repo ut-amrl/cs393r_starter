@@ -20,20 +20,16 @@ Please refer to the [UT AUTOmata reference manual]() for instructions on setting
 
 ### Clone and Build
 1. `git clone <your repository url>` (found in the upper right)
-2. After you have cloned the repo, add it to your ROS path by adding the following line to the end of `~/.bashrc`:   
+2. After you have cloned the repo, enable ROS2 to find it by adding the following to your `~/.bashrc`:   
     ```
-    export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:[Local path to your repo]
-    ```
-    For example:
-    ```
-    export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:/home/joydeepb/cs393r_starter
+    source [Local path to your repo]/install/setup.bash
     ```
 3. Reload `.bashrc` so that the path is updated:
     ```
     source ~/.bashrc
     ```
 4. `cd <cloned_repo>`
-5. `make -j`
+5. `colcon build --packages-select cs393r_starter`
 
 ### Optional: Building/Running with Docker
 Skip the above steps
