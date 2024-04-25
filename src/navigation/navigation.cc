@@ -22,21 +22,21 @@
 #include "gflags/gflags.h"
 #include "eigen3/Eigen/Dense"
 #include "eigen3/Eigen/Geometry"
-#include "amrl_msgs/AckermannCurvatureDriveMsg.h"
-#include "amrl_msgs/Pose2Df.h"
-#include "amrl_msgs/VisualizationMsg.h"
+#include "amrl_msgs/msg/ackermann_curvature_drive_msg.hpp"
+#include "amrl_msgs/msg/pose2_df.hpp"
+#include "amrl_msgs/msg/visualization_msg.hpp"
 #include "glog/logging.h"
-#include "ros/ros.h"
-#include "ros/package.h"
 #include "shared/math/math_util.h"
 #include "shared/util/timer.h"
-#include "shared/ros/ros_helpers.h"
+#include "ros2_helpers.h"
 #include "navigation.h"
 #include "visualization/visualization.h"
 
+#include <ament_index_cpp/get_package_share_directory.hpp>
+
 using Eigen::Vector2f;
-using amrl_msgs::AckermannCurvatureDriveMsg;
-using amrl_msgs::VisualizationMsg;
+using amrl_msgs::msg::AckermannCurvatureDriveMsg;
+using amrl_msgs::msg::VisualizationMsg;
 using std::string;
 using std::vector;
 
@@ -44,8 +44,8 @@ using namespace math_util;
 using namespace ros_helpers;
 
 namespace {
-ros::Publisher drive_pub_;
-ros::Publisher viz_pub_;
+rclcpp::Publisher<AckermannCurvatureDriveMsg>::SharedPtr drive_pub_;
+rclcpp::Publisher<VisualizationMsg>::SharedPtr viz_pub_;
 VisualizationMsg local_viz_msg_;
 VisualizationMsg global_viz_msg_;
 AckermannCurvatureDriveMsg drive_msg_;
@@ -56,11 +56,12 @@ const float kEpsilon = 1e-5;
 namespace navigation {
 
 string GetMapFileFromName(const string& map) {
-  string maps_dir_ = ros::package::getPath("amrl_maps");
+  string maps_dir_ = ament_index_cpp::get_package_share_directory("amrl_maps");
   return maps_dir_ + "/" + map + "/" + map + ".vectormap.txt";
 }
 
-Navigation::Navigation(const string& map_name, ros::NodeHandle* n) :
+Navigation::Navigation(const string& map_name, const std::shared_ptr<rclcpp::Node> &node) :
+    node_(node),
     odom_initialized_(false),
     localization_initialized_(false),
     robot_loc_(0, 0),
@@ -71,14 +72,15 @@ Navigation::Navigation(const string& map_name, ros::NodeHandle* n) :
     nav_goal_loc_(0, 0),
     nav_goal_angle_(0) {
   map_.Load(GetMapFileFromName(map_name));
-  drive_pub_ = n->advertise<AckermannCurvatureDriveMsg>(
+  LOG(INFO) << "Loaded map file: " << GetMapFileFromName(map_name);
+  drive_pub_ = node->create_publisher<AckermannCurvatureDriveMsg>(
       "ackermann_curvature_drive", 1);
-  viz_pub_ = n->advertise<VisualizationMsg>("visualization", 1);
+  viz_pub_ = node->create_publisher<VisualizationMsg>("visualization", 1);
   local_viz_msg_ = visualization::NewVisualizationMessage(
       "base_link", "navigation_local");
   global_viz_msg_ = visualization::NewVisualizationMessage(
       "map", "navigation_global");
-  InitRosHeader("base_link", &drive_msg_.header);
+  InitRosHeader("base_link", node->get_clock()->now(), &drive_msg_.header);
 }
 
 void Navigation::SetNavGoal(const Vector2f& loc, float angle) {
@@ -133,13 +135,13 @@ void Navigation::Run() {
   // drive_msg_.velocity = ...;
 
   // Add timestamps to all messages.
-  local_viz_msg_.header.stamp = ros::Time::now();
-  global_viz_msg_.header.stamp = ros::Time::now();
-  drive_msg_.header.stamp = ros::Time::now();
+  local_viz_msg_.header.stamp = node_->get_clock()->now();
+  global_viz_msg_.header.stamp = node_->get_clock()->now();
+  drive_msg_.header.stamp = node_->get_clock()->now();
   // Publish messages.
-  viz_pub_.publish(local_viz_msg_);
-  viz_pub_.publish(global_viz_msg_);
-  drive_pub_.publish(drive_msg_);
+  viz_pub_->publish(local_viz_msg_);
+  viz_pub_->publish(global_viz_msg_);
+  drive_pub_->publish(drive_msg_);
 }
 
 }  // namespace navigation

@@ -18,21 +18,21 @@ all: build/CMakeLists.txt.copy
 	$(MAKE) --no-print-directory -C build
 
 docker_all: docker_build_q
-	docker run --rm --volume "$(shell pwd)":/home/dev/cs393r_starter cs393r_starter "cd cs393r_starter && make -j"
+	docker run --rm --volume "$(shell pwd)":/home/dev/cs393r_starter ros2_cs393r_starter "cd cs393r_starter"
 
 docker_shell: docker_build_q
-	if [ $(shell docker ps -a -f name=cs393r_starter_shell | wc -l) -ne 2 ]; then docker run -dit --name cs393r_starter_shell --volume "$(shell pwd)":/home/dev/cs393r_starter --workdir /home/dev/cs393r_starter -p 10272:10272 cs393r_starter; fi
-	docker exec -it cs393r_starter_shell bash -l
+	if [ $(shell docker ps -a -f name=ros2_cs393r_starter_shell | wc -l) -ne 2 ]; then docker run -dit --name ros2_cs393r_starter_shell --volume "$(shell pwd)":/home/dev/cs393r_starter --workdir /home/dev/cs393r_starter -p 10272:10272 ros2_cs393r_starter; fi
+	docker exec -it ros2_cs393r_starter_shell bash -l
 
 docker_stop:
-	docker container stop cs393r_starter_shell
-	docker container rm cs393r_starter_shell
+	docker container stop ros2_cs393r_starter_shell
+	docker container rm ros2_cs393r_starter_shell
 
 docker_build:
-	docker build --build-arg HOST_UID=$(shell id -u) -t cs393r_starter .
+	docker build --build-arg HOST_UID=$(shell id -u) -t ros2_cs393r_starter .
 
 docker_build_q:
-	docker build -q --build-arg HOST_UID=$(shell id -u) -t cs393r_starter .
+	docker build -q --build-arg HOST_UID=$(shell id -u) -t ros2_cs393r_starter .
 
 # Sets the build type to Debug.
 set_debug:

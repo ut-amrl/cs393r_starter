@@ -31,17 +31,14 @@
 
 #include "eigen3/Eigen/Dense"
 #include "eigen3/Eigen/Geometry"
-#include "amrl_msgs/Localization2DMsg.h"
-#include "amrl_msgs/VisualizationMsg.h"
+#include "amrl_msgs/msg/localization2_d_msg.hpp"
+#include "amrl_msgs/msg/visualization_msg.hpp"
 #include "gflags/gflags.h"
-#include "geometry_msgs/PoseArray.h"
-#include "sensor_msgs/LaserScan.h"
-#include "nav_msgs/Odometry.h"
-#include "ros/ros.h"
-#include "rosbag/bag.h"
-#include "rosbag/view.h"
-#include "ros/package.h"
+#include "geometry_msgs/msg/pose_array.hpp"
+#include "sensor_msgs/msg/laser_scan.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 
+#include "ros2_helpers.h"
 #include "config_reader/config_reader.h"
 #include "shared/math/math_util.h"
 #include "shared/math/line2d.h"
@@ -49,13 +46,13 @@
 
 #include "particle_filter.h"
 #include "visualization/visualization.h"
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
-using amrl_msgs::VisualizationMsg;
+using amrl_msgs::msg::VisualizationMsg;
 using geometry::line2f;
 using geometry::Line;
 using math_util::DegToRad;
 using math_util::RadToDeg;
-using ros::Time;
 using std::string;
 using std::vector;
 using Eigen::Vector2f;
@@ -83,20 +80,20 @@ config_reader::ConfigReader config_reader_({"config/particle_filter.lua"});
 
 bool run_ = true;
 particle_filter::ParticleFilter particle_filter_;
-ros::Publisher visualization_publisher_;
-ros::Publisher localization_publisher_;
-ros::Publisher laser_publisher_;
+rclcpp::Publisher<amrl_msgs::msg::VisualizationMsg>::SharedPtr visualization_publisher_;
+rclcpp::Publisher<amrl_msgs::msg::Localization2DMsg>::SharedPtr localization_publisher_;
+rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laser_publisher_;
+std::shared_ptr<rclcpp::Node> node_;
 VisualizationMsg vis_msg_;
-amrl_msgs::Localization2DMsg localization_msg_;
-sensor_msgs::LaserScan last_laser_msg_;
+amrl_msgs::msg::Localization2DMsg localization_msg_;
+sensor_msgs::msg::LaserScan last_laser_msg_;
 
 vector<Vector2f> trajectory_points_;
 string current_map_;
 
 void InitializeMsgs() {
-  std_msgs::Header header;
+  std_msgs::msg::Header header;
   header.frame_id = "map";
-  header.seq = 0;
   localization_msg_.header = header;
   vis_msg_ = visualization::NewVisualizationMessage("map", "particle_filter");
 }
@@ -104,7 +101,7 @@ void InitializeMsgs() {
 void PublishParticles() {
   vector<particle_filter::Particle> particles;
   particle_filter_.GetParticles(&particles);
-  for (const particle_filter::Particle& p : particles) {
+  for (const particle_filter::Particle &p : particles) {
     DrawParticle(p.loc, p.angle, vis_msg_);
   }
 }
@@ -124,7 +121,7 @@ void PublishPredictedScan() {
       last_laser_msg_.angle_min,
       last_laser_msg_.angle_max,
       &predicted_scan);
-  for (const Vector2f& p : predicted_scan) {
+  for (const Vector2f &p : predicted_scan) {
     DrawPoint(p, kColor, vis_msg_);
   }
 }
@@ -159,18 +156,18 @@ void PublishVisualization() {
     return;
   }
   t_last = GetMonotonicTime();
-  vis_msg_.header.stamp = ros::Time::now();
+  vis_msg_.header.stamp = node_->get_clock()->now();
   ClearVisualizationMsg(vis_msg_);
 
   PublishParticles();
   PublishPredictedScan();
   PublishTrajectory();
-  visualization_publisher_.publish(vis_msg_);
+  visualization_publisher_->publish(vis_msg_);
 }
 
-void LaserCallback(const sensor_msgs::LaserScan& msg) {
+void LaserCallback(const sensor_msgs::msg::LaserScan &msg) {
   if (FLAGS_v > 0) {
-    printf("Laser t=%f\n", msg.header.stamp.toSec());
+    printf("Laser t=%f\n", ros_helpers::rosHeaderStampToSeconds(msg.header));
   }
   last_laser_msg_ = msg;
   particle_filter_.ObserveLaser(
@@ -186,17 +183,17 @@ void PublishLocation() {
   Vector2f robot_loc(0, 0);
   float robot_angle(0);
   particle_filter_.GetLocation(&robot_loc, &robot_angle);
-  localization_msg_.header.stamp = ros::Time::now();
+  localization_msg_.header.stamp = node_->get_clock()->now();
   localization_msg_.map = current_map_;
   localization_msg_.pose.x = robot_loc.x();
   localization_msg_.pose.y = robot_loc.y();
   localization_msg_.pose.theta = robot_angle;
-  localization_publisher_.publish(localization_msg_);
+  localization_publisher_->publish(localization_msg_);
 }
 
-void OdometryCallback(const nav_msgs::Odometry& msg) {
+void OdometryCallback(const nav_msgs::msg::Odometry &msg) {
   if (FLAGS_v > 0) {
-    printf("Odometry t=%f\n", msg.header.stamp.toSec());
+    printf("Odometry t=%f\n", ros_helpers::rosHeaderStampToSeconds(msg.header));
   }
   const Vector2f odom_loc(msg.pose.pose.position.x, msg.pose.pose.position.y);
   const float odom_angle =
@@ -206,12 +203,12 @@ void OdometryCallback(const nav_msgs::Odometry& msg) {
   PublishVisualization();
 }
 
-string GetMapFileFromName(const string& map) {
-  string maps_dir_ = ros::package::getPath("amrl_maps");
+string GetMapFileFromName(const string &map) {
+  string maps_dir_ = ament_index_cpp::get_package_share_directory("amrl_maps");
   return maps_dir_ + "/" + map + "/" + map + ".vectormap.txt";
 }
 
-void InitCallback(const amrl_msgs::Localization2DMsg& msg) {
+void InitCallback(const amrl_msgs::msg::Localization2DMsg &msg) {
   const Vector2f init_loc(msg.pose.x, msg.pose.y);
   const float init_angle = msg.pose.theta;
   current_map_ = msg.map;
@@ -225,16 +222,16 @@ void InitCallback(const amrl_msgs::Localization2DMsg& msg) {
   trajectory_points_.clear();
 }
 
-void ProcessLive(ros::NodeHandle* n) {
-  ros::Subscriber initial_pose_sub = n->subscribe(
+void ProcessLive(std::shared_ptr<rclcpp::Node> &n) {
+  rclcpp::Subscription<amrl_msgs::msg::Localization2DMsg>::SharedPtr initial_pose_sub = n->create_subscription<amrl_msgs::msg::Localization2DMsg>(
       FLAGS_init_topic.c_str(),
       1,
       InitCallback);
-  ros::Subscriber laser_sub = n->subscribe(
+  rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_sub = n->create_subscription<sensor_msgs::msg::LaserScan>(
       FLAGS_laser_topic.c_str(),
       1,
       LaserCallback);
-  ros::Subscriber odom_sub = n->subscribe(
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub = n->create_subscription<nav_msgs::msg::Odometry>(
       FLAGS_odom_topic.c_str(),
       1,
       OdometryCallback);
@@ -242,8 +239,10 @@ void ProcessLive(ros::NodeHandle* n) {
       GetMapFileFromName(current_map_),
       Vector2f(CONFIG_init_x_, CONFIG_init_x_),
       DegToRad(CONFIG_init_r_));
-  while (ros::ok() && run_) {
-    ros::spinOnce();
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(n);
+  while (rclcpp::ok() && run_) {
+    executor.spin_once();
     PublishVisualization();
     Sleep(0.01);
   }
@@ -258,23 +257,23 @@ void SignalHandler(int) {
   run_ = false;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   google::ParseCommandLineFlags(&argc, &argv, false);
   signal(SIGINT, SignalHandler);
   // Initialize ROS.
-  ros::init(argc, argv, "particle_filter", ros::init_options::NoSigintHandler);
-  ros::NodeHandle n;
+  rclcpp::init(argc, argv);
+  node_ = std::make_shared<rclcpp::Node>("particle_filter");
   InitializeMsgs();
   current_map_ = CONFIG_map_name_;
 
   visualization_publisher_ =
-      n.advertise<VisualizationMsg>("visualization", 1);
+      node_->create_publisher<VisualizationMsg>("visualization", 1);
   localization_publisher_ =
-      n.advertise<amrl_msgs::Localization2DMsg>("localization", 1);
+      node_->create_publisher<amrl_msgs::msg::Localization2DMsg>("localization", 1);
   laser_publisher_ =
-      n.advertise<sensor_msgs::LaserScan>("scan", 1);
+      node_->create_publisher<sensor_msgs::msg::LaserScan>("scan", 1);
 
-  ProcessLive(&n);
+  ProcessLive(node_);
 
   return 0;
 }

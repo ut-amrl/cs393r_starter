@@ -50,26 +50,26 @@ else
     INSTALL_PATH="${HOME}/"
 fi
 
-if ! [[ -d "${INSTALL_PATH}ut_automata" ]]
-then
-    echo "${INSTALL_PATH}ut_automata does not exist, please provide a valid path using ./tmux_session.sh -d <INSTALL_PATH>"
-    exit 127
-fi
+#if ! [[ -d "${INSTALL_PATH}ut_automata" ]]
+#then
+#    echo "${INSTALL_PATH}ut_automata does not exist, please provide a valid path using ./tmux_session.sh -d <INSTALL_PATH>"
+#    exit 127
+#fi
 
 tmux new-session -d -s $session 
 tmux set mouse on
 window=0
 
-tmux rename-window -t $session:$window 'roscore'
-tmux send-keys -t $session:$window 'roscore' C-m
+tmux rename-window -t $session:$window 'websocket'
+tmux send-keys -t $session:$window 'cd ~/ut_turtlebots && colcon build --packages-select ut_turtlebots && source ./install/setup.bash && ros2 run ut_turtlebots websocket_main' C-m
 
-window=1
-tmux new-window -t $session:$window -n 'simulator'
-tmux send-keys -t $session:$window "cd ${INSTALL_PATH}/ut_automata && ./bin/simulator --localize" C-m
-
-window=2
-tmux new-window -t $session:$window -n 'websocket'
-tmux send-keys -t $session:$window "cd ${INSTALL_PATH}/ut_automata && ./bin/websocket" C-m
+#window=1
+#tmux new-window -t $session:$window -n 'simulator'
+#tmux send-keys -t $session:$window "cd ${INSTALL_PATH}/ut_automata && ./bin/simulator --localize" C-m
+#
+#window=2
+#tmux new-window -t $session:$window -n 'websocket'
+#tmux send-keys -t $session:$window "cd ${INSTALL_PATH}/ut_automata && ./bin/websocket" C-m
 
 if ! [ -z ${CS393R_DOCKER_CONTEXT+x} ]
 then

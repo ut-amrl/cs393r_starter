@@ -23,22 +23,21 @@
 #include <string>
 
 #include "eigen3/Eigen/Dense"
-#include "amrl_msgs/Pose2Df.h"
-#include "amrl_msgs/ColoredArc2D.h"
-#include "amrl_msgs/ColoredLine2D.h"
-#include "amrl_msgs/ColoredPoint2D.h"
-#include "amrl_msgs/VisualizationMsg.h"
-#include "ros/ros.h"
+//#include "amrl_msgs/msg/pose2_df.hpp"
+#include "amrl_msgs/msg/colored_arc2_d.hpp"
+#include "amrl_msgs/msg/colored_line2_d.hpp"
+#include "amrl_msgs/msg/colored_point2_d.hpp"
+#include "amrl_msgs/msg/visualization_msg.hpp"
 
 #include "visualization.h"
 
 using Eigen::Rotation2Df;
 using Eigen::Vector2f;
-using amrl_msgs::ColoredArc2D;
-using amrl_msgs::ColoredLine2D;
-using amrl_msgs::ColoredPoint2D;
-using amrl_msgs::Pose2Df;
-using amrl_msgs::VisualizationMsg;
+using amrl_msgs::msg::ColoredArc2D;
+using amrl_msgs::msg::ColoredLine2D;
+using amrl_msgs::msg::ColoredPoint2D;
+using amrl_msgs::msg::Pose2Df;
+using amrl_msgs::msg::VisualizationMsg;
 using std::max;
 using std::string;
 
@@ -61,11 +60,10 @@ void ClearVisualizationMsg(VisualizationMsg& msg) {
 }
 
 // Return new visualization message, with initialized headers and namespace.
-amrl_msgs::VisualizationMsg NewVisualizationMessage(
+amrl_msgs::msg::VisualizationMsg NewVisualizationMessage(
     const string& frame, const string& ns) {
   VisualizationMsg msg;
   msg.header.frame_id = frame;
-  msg.header.seq = 0;
   msg.ns = ns;
   return msg;
 }

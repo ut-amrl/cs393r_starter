@@ -25,12 +25,10 @@
 
 #include "vector_map/vector_map.h"
 
+#include <rclcpp/rclcpp.hpp>
+
 #ifndef NAVIGATION_H
 #define NAVIGATION_H
-
-namespace ros {
-  class NodeHandle;
-}  // namespace ros
 
 namespace navigation {
 
@@ -47,7 +45,7 @@ class Navigation {
  public:
 
    // Constructor
-  explicit Navigation(const std::string& map_file, ros::NodeHandle* n);
+  explicit Navigation(const std::string& map_file, const std::shared_ptr<rclcpp::Node> &node);
 
   // Used in callback from localization to update position.
   void UpdateLocation(const Eigen::Vector2f& loc, float angle);
@@ -68,6 +66,7 @@ class Navigation {
   void SetNavGoal(const Eigen::Vector2f& loc, float angle);
 
  private:
+  std::shared_ptr<rclcpp::Node> node_;
 
   // Whether odometry has been initialized.
   bool odom_initialized_;

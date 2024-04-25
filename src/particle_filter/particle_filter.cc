@@ -91,7 +91,7 @@ void ParticleFilter::GetPredictedPointCloud(const Vector2f& loc,
     // You can create a new line segment instance as follows, for :
     line2f my_line(1, 2, 3, 4); // Line segment from (1,2) to (3.4).
     // Access the end points using `.p0` and `.p1` members:
-    printf("P0: %f, %f P1: %f,%f\n", 
+    printf("P0: %f, %f P1: %f,%f\n",
            my_line.p0.x(),
            my_line.p0.y(),
            my_line.p1.x(),
@@ -104,7 +104,7 @@ void ParticleFilter::GetPredictedPointCloud(const Vector2f& loc,
     Vector2f intersection_point; // Return variable
     intersects = map_line.Intersection(my_line, &intersection_point);
     if (intersects) {
-      printf("Intersects at %f,%f\n", 
+      printf("Intersects at %f,%f\n",
              intersection_point.x(),
              intersection_point.y());
     } else {
