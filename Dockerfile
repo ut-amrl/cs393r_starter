@@ -7,7 +7,9 @@ RUN apt-get update && \
                        libboost-all-dev libqt5websockets5-dev \
                        python-is-python3 libeigen3-dev sudo tmux
 
-RUN apt-get update && apt-get install -y vim
+RUN apt-get update && apt-get install -y vim wget
+
+RUN apt update && apt install -y ros-galactic-turtlebot4-desktop ros-dev-tools ros-galactic-turtlebot4-simulator ros-galactic-irobot-create-nodes
 
 ARG HOST_UID
 RUN useradd dev -m -s /bin/bash -u $HOST_UID -G sudo

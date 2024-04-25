@@ -32,6 +32,10 @@
 #include "navigation.h"
 #include "visualization/visualization.h"
 
+#include <irobot_create_msgs/action/drive_distance.hpp>
+#include <irobot_create_msgs/action/drive_arc.hpp>
+#include <irobot_create_msgs/action/rotate_angle.hpp>
+
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
 using Eigen::Vector2f;
@@ -44,23 +48,21 @@ using namespace math_util;
 using namespace ros_helpers;
 
 namespace {
-rclcpp::Publisher<AckermannCurvatureDriveMsg>::SharedPtr drive_pub_;
 rclcpp::Publisher<VisualizationMsg>::SharedPtr viz_pub_;
 VisualizationMsg local_viz_msg_;
 VisualizationMsg global_viz_msg_;
-AckermannCurvatureDriveMsg drive_msg_;
 // Epsilon value for handling limited numerical precision.
 const float kEpsilon = 1e-5;
 } //namespace
 
 namespace navigation {
 
-string GetMapFileFromName(const string& map) {
+string GetMapFileFromName(const string &map) {
   string maps_dir_ = ament_index_cpp::get_package_share_directory("amrl_maps");
   return maps_dir_ + "/" + map + "/" + map + ".vectormap.txt";
 }
 
-Navigation::Navigation(const string& map_name, const std::shared_ptr<rclcpp::Node> &node) :
+Navigation::Navigation(const string &map_name, const std::shared_ptr<rclcpp::Node> &node) :
     node_(node),
     odom_initialized_(false),
     localization_initialized_(false),
@@ -73,28 +75,151 @@ Navigation::Navigation(const string& map_name, const std::shared_ptr<rclcpp::Nod
     nav_goal_angle_(0) {
   map_.Load(GetMapFileFromName(map_name));
   LOG(INFO) << "Loaded map file: " << GetMapFileFromName(map_name);
-  drive_pub_ = node->create_publisher<AckermannCurvatureDriveMsg>(
-      "ackermann_curvature_drive", 1);
   viz_pub_ = node->create_publisher<VisualizationMsg>("visualization", 1);
   local_viz_msg_ = visualization::NewVisualizationMessage(
       "base_link", "navigation_local");
   global_viz_msg_ = visualization::NewVisualizationMessage(
       "map", "navigation_global");
-  InitRosHeader("base_link", node->get_clock()->now(), &drive_msg_.header);
+
+  drive_distance_client_ = rclcpp_action::create_client<irobot_create_msgs::action::DriveDistance>(
+        node_,
+        "/ut/drive_distance");
+  drive_arc_client_ = rclcpp_action::create_client<irobot_create_msgs::action::DriveArc>(
+        node_,
+        "/ut/drive_arc");
+  rotate_angle_client_ = rclcpp_action::create_client<irobot_create_msgs::action::RotateAngle>(
+        node_,
+        "/ut/rotate_angle");
 }
 
-void Navigation::SetNavGoal(const Vector2f& loc, float angle) {
+void Navigation::SetNavGoal(const Vector2f &loc, float angle) {
 }
 
-void Navigation::UpdateLocation(const Eigen::Vector2f& loc, float angle) {
+bool Navigation::StartDriveDistanceAction(const double &distance, const double &max_translation_speed,
+                                          const std::chrono::duration<int64_t, std::milli> &wait_for_server_timeout) {
+  if (anyGoalsInProgress()) {
+      LOG(ERROR)
+          << "Tried to initiate new action when one is already in progress. Make sure that one is not executing and reset variables appropriately";
+      return false;
+  }
+  using namespace std::placeholders;
+  if (!drive_distance_client_->wait_for_action_server(wait_for_server_timeout)) {
+      LOG(INFO) << "Timed out waiting for server";
+      return false;
+  }
+
+  if (!drive_distance_pending_feedback_msgs_.empty()) {
+      LOG(WARNING) << "Have unprocessed feedback for drive distance. Clearing as we issue new goal";
+      drive_distance_pending_feedback_msgs_.clear();
+  }
+
+  if (distance < 0) {
+      LOG(WARNING) << "Turtlebot will only back up a couple cm, because it lacks cliff sensors on the back";
+  }
+
+  auto drive_distance_goal = irobot_create_msgs::action::DriveDistance::Goal();
+  drive_distance_goal.distance = distance;
+  drive_distance_goal.max_translation_speed = max_translation_speed;
+
+  auto send_goal_options = rclcpp_action::Client<irobot_create_msgs::action::DriveDistance>::SendGoalOptions();
+  send_goal_options.goal_response_callback =
+        std::bind(&Navigation::DriveDistanceGoalResponseCallback, this, _1);
+  send_goal_options.feedback_callback =
+        std::bind(&Navigation::DriveDistanceFeedbackCallback, this, _1, _2);
+  send_goal_options.result_callback =
+        std::bind(&Navigation::DriveDistanceResultCallback, this, _1);
+  drive_distance_goal_status_ = PENDING_ACCEPTANCE;
+  drive_distance_goal_issued_time_ = node_->get_clock()->now();
+  drive_distance_client_->async_send_goal(drive_distance_goal, send_goal_options);
+  return true;
+}
+
+bool Navigation::StartDriveArcAction(const int &translate_direction, const double &arc_radius, const double &arc_angle, const double &max_translation_speed,
+                         const std::chrono::duration<int64_t, std::milli> &wait_for_server_timeout) {
+  if (anyGoalsInProgress()) {
+      LOG(ERROR)
+          << "Tried to initiate new action when one is already in progress. Make sure that one is not executing and reset variables appropriately";
+      return false;
+  }
+  using namespace std::placeholders;
+  if (!drive_arc_client_->wait_for_action_server(wait_for_server_timeout)) {
+      LOG(INFO) << "Timed out waiting for server";
+      return false;
+  }
+
+  if (!drive_arc_pending_feedback_msgs_.empty()) {
+      LOG(WARNING) << "Have unprocessed feedback for drive arc. Clearing as we issue new goal";
+      drive_arc_pending_feedback_msgs_.clear();
+  }
+
+  if (arc_angle < 0) {
+      LOG(WARNING) << "Turtlebot will only back up a couple cm, because it lacks cliff sensors on the back";
+  }
+
+  auto drive_arc_goal = irobot_create_msgs::action::DriveArc::Goal();
+  drive_arc_goal.translate_direction = translate_direction;
+  drive_arc_goal.angle = arc_angle;
+  drive_arc_goal.radius = arc_radius;
+  drive_arc_goal.max_translation_speed = max_translation_speed;
+
+  auto send_goal_options = rclcpp_action::Client<irobot_create_msgs::action::DriveArc>::SendGoalOptions();
+  send_goal_options.goal_response_callback =
+        std::bind(&Navigation::DriveArcGoalResponseCallback, this, _1);
+  send_goal_options.feedback_callback =
+        std::bind(&Navigation::DriveArcFeedbackCallback, this, _1, _2);
+  send_goal_options.result_callback =
+        std::bind(&Navigation::DriveArcResultCallback, this, _1);
+  drive_arc_goal_status_ = PENDING_ACCEPTANCE;
+  drive_arc_goal_issued_time_ = node_->get_clock()->now();
+  drive_arc_client_->async_send_goal(drive_arc_goal, send_goal_options);
+  return true;
+}
+
+bool Navigation::StartRotateAngleAction(const double &angle_rad, const double &max_rotation_speed,
+                                        const std::chrono::duration<int64_t, std::milli> &wait_for_server_timeout) {
+  if (anyGoalsInProgress()) {
+      LOG(ERROR)
+          << "Tried to initiate new action when one is already in progress. Make sure that one is not executing and reset variables appropriately";
+      return false;
+  }
+  using namespace std::placeholders;
+  if (!rotate_angle_client_->wait_for_action_server(wait_for_server_timeout)) {
+      LOG(INFO) << "Timed out waiting for server";
+      return false;
+  }
+
+  if (!rotate_angle_pending_feedback_msgs_.empty()) {
+      LOG(WARNING) << "Have unprocessed feedback for rotate_angle. Clearing as we issue new goal";
+      rotate_angle_pending_feedback_msgs_.clear();
+  }
+
+  auto rotate_angle_goal = irobot_create_msgs::action::RotateAngle::Goal();
+  rotate_angle_goal.angle = angle_rad;
+  rotate_angle_goal.max_rotation_speed = max_rotation_speed;
+
+  auto send_goal_options = rclcpp_action::Client<irobot_create_msgs::action::RotateAngle>::SendGoalOptions();
+  send_goal_options.goal_response_callback =
+        std::bind(&Navigation::RotateAngleGoalResponseCallback, this, _1);
+  send_goal_options.feedback_callback =
+        std::bind(&Navigation::RotateAngleFeedbackCallback, this, _1, _2);
+
+  send_goal_options.result_callback =
+        std::bind(&Navigation::RotateAngleResultCallback, this, _1);
+  rotate_angle_goal_status_ = PENDING_ACCEPTANCE;
+  rotate_angle_goal_issued_time_ = node_->get_clock()->now();
+  rotate_angle_client_->async_send_goal(rotate_angle_goal, send_goal_options);
+  return true;
+}
+
+void Navigation::UpdateLocation(const Eigen::Vector2f &loc, float angle) {
   localization_initialized_ = true;
   robot_loc_ = loc;
   robot_angle_ = angle;
 }
 
-void Navigation::UpdateOdometry(const Vector2f& loc,
+void Navigation::UpdateOdometry(const Vector2f &loc,
                                 float angle,
-                                const Vector2f& vel,
+                                const Vector2f &vel,
                                 float ang_vel) {
   robot_omega_ = ang_vel;
   robot_vel_ = vel;
@@ -110,14 +235,14 @@ void Navigation::UpdateOdometry(const Vector2f& loc,
   odom_angle_ = angle;
 }
 
-void Navigation::ObservePointCloud(const vector<Vector2f>& cloud,
+void Navigation::ObservePointCloud(const vector<Vector2f> &cloud,
                                    double time) {
-  point_cloud_ = cloud;                                     
+  point_cloud_ = cloud;
 }
 
 void Navigation::Run() {
   // This function gets called 20 times a second to form the control loop.
-  
+
   // Clear previous visualizations.
   visualization::ClearVisualizationMsg(local_viz_msg_);
   visualization::ClearVisualizationMsg(global_viz_msg_);
@@ -125,23 +250,26 @@ void Navigation::Run() {
   // If odometry has not been initialized, we can't do anything.
   if (!odom_initialized_) return;
 
-  // The control iteration goes here. 
+  // The control iteration goes here.
   // Feel free to make helper functions to structure the control appropriately.
-  
+
   // The latest observed point cloud is accessible via "point_cloud_"
 
   // Eventually, you will have to set the control values to issue drive commands:
-  // drive_msg_.curvature = ...;
-  // drive_msg_.velocity = ...;
+  // You can call StartDriveDistanceAction, StartDriveArcAction, or StartRotateAngleAction
+  // and then wait for the status
+
+  // You should also check that it's not stuck due to ros communication errors by keeping track of how much time
+  // has elapsed since your request
+
+  // Make sure to reset the status to NONE once you've processed the completion of an action request
 
   // Add timestamps to all messages.
   local_viz_msg_.header.stamp = node_->get_clock()->now();
   global_viz_msg_.header.stamp = node_->get_clock()->now();
-  drive_msg_.header.stamp = node_->get_clock()->now();
   // Publish messages.
   viz_pub_->publish(local_viz_msg_);
   viz_pub_->publish(global_viz_msg_);
-  drive_pub_->publish(drive_msg_);
 }
 
 }  // namespace navigation

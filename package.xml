@@ -15,6 +15,8 @@
   <depend>sensor_msgs</depend>
   <depend>amrl_msgs</depend>
   <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
+  <depend>irobot_create_msgs</depend>
 
   <build_depend>rosidl_default_generators</build_depend>
 

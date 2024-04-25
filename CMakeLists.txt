@@ -31,10 +31,12 @@ SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/submodules")
 
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(amrl_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(irobot_create_msgs REQUIRED)
 
 SET(libs glog gflags amrl-shared-lib boost_system lua5.1
     pthread)
@@ -72,7 +74,7 @@ add_executable(navigation
                         src/navigation/navigation_main.cc
                         src/navigation/navigation.cc)
 TARGET_LINK_LIBRARIES(navigation shared_library ${libs})
-ament_target_dependencies(navigation rclcpp amrl_msgs sensor_msgs geometry_msgs)
+ament_target_dependencies(navigation rclcpp rclcpp_action amrl_msgs sensor_msgs geometry_msgs irobot_create_msgs)
 
 add_executable(eigen_tutorial
                src/eigen_tutorial.cc)
