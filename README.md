@@ -37,7 +37,7 @@ Please refer to the [UT AUTOmata reference manual]() for instructions on setting
 
 ### Optional: Building/Running with Docker
 Skip the above steps
-1. Make sure you have Docker installed and set up.
+1. Make sure you have Docker installed and set up. Make sure you can run as a non-root user (see [Manage Docker as a non-root user](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user))
 2. Make sure you are in the root directory of the repository.
 3. Run `make docker_all` to just compile. 
 4. You can run `make docker_shell` to get a shell within the Docker container. The shell will automatically launch `roscore` and the `ut_automata` websocket and simulator inside of a `tmux` session. Inside the shell, you can compile and run your navigation code and connect using localhost in the web visualization. 
