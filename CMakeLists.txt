@@ -36,6 +36,7 @@ find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(amrl_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(irobot_create_msgs REQUIRED)
 
 SET(libs glog gflags amrl-shared-lib boost_system lua5.1

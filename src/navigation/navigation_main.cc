@@ -80,6 +80,7 @@ void LaserCallback(const sensor_msgs::msg::LaserScan &msg) {
                ros_helpers::rosHeaderStampToSeconds(msg.header),
                GetWallTime() - ros_helpers::rosHeaderStampToSeconds(msg.header));
     }
+    LOG(INFO) << "REceived scan";
     // Location of the laser on the robot. Assumes the laser is forward-facing.
     const Vector2f kLaserLoc(0.2, 0);
 
@@ -161,6 +162,7 @@ int main(int argc, char **argv) {
     RateLoop loop(20.0);
     while (run_ && rclcpp::ok()) {
         executor.spin_once();
+        LOG(INFO) << "Spinning";
         navigation_->Run();
         loop.Sleep();
     }

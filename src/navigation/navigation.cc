@@ -32,6 +32,8 @@
 #include "navigation.h"
 #include "visualization/visualization.h"
 
+#include <geometry_msgs/msg/twist.hpp>
+
 #include <irobot_create_msgs/action/drive_distance.hpp>
 #include <irobot_create_msgs/action/drive_arc.hpp>
 #include <irobot_create_msgs/action/rotate_angle.hpp>
@@ -49,6 +51,7 @@ using namespace ros_helpers;
 
 namespace {
 rclcpp::Publisher<VisualizationMsg>::SharedPtr viz_pub_;
+rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr twist_pub_;
 VisualizationMsg local_viz_msg_;
 VisualizationMsg global_viz_msg_;
 // Epsilon value for handling limited numerical precision.
@@ -76,6 +79,7 @@ Navigation::Navigation(const string &map_name, const std::shared_ptr<rclcpp::Nod
   map_.Load(GetMapFileFromName(map_name));
   LOG(INFO) << "Loaded map file: " << GetMapFileFromName(map_name);
   viz_pub_ = node->create_publisher<VisualizationMsg>("visualization", 1);
+  twist_pub_ = node->create_publisher<geometry_msgs::msg::Twist>("/ut/cmd_vel", 1);
   local_viz_msg_ = visualization::NewVisualizationMessage(
       "base_link", "navigation_local");
   global_viz_msg_ = visualization::NewVisualizationMessage(
@@ -263,6 +267,10 @@ void Navigation::Run() {
   // has elapsed since your request
 
   // Make sure to reset the status to NONE once you've processed the completion of an action request
+
+  geometry_msgs::msg::Twist twist;
+  twist.linear.x = 1;
+  twist_pub_->publish(twist);
 
   // Add timestamps to all messages.
   local_viz_msg_.header.stamp = node_->get_clock()->now();
