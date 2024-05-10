@@ -348,7 +348,7 @@ void VectorMap::Cleanup() {
     // Check if l1 intersects with any line in new lines.
     Vector2f p;
     bool intersection = false;
-    for (const line2f l2 : new_lines) {
+    for (const line2f& l2 : new_lines) {
       if (l2.Intersection(l1, &p)) {
         const Vector2f shrink = kShrinkDistance * l1.Dir();
         const line2f a = line2f(l1.p0, p - shrink);
